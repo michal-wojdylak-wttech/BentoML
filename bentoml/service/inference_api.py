@@ -28,7 +28,9 @@ from bentoml.configuration.containers import BentoMLContainer
 from bentoml.exceptions import BentoMLConfigException
 from bentoml.types import HTTPRequest, HTTPResponse, InferenceResult, InferenceTask
 from bentoml.utils import cached_property
+import newrelic.agent
 
+newrelic.agent.initialize()
 logger = logging.getLogger(__name__)
 prediction_logger = logging.getLogger("bentoml.prediction")
 
@@ -223,7 +225,7 @@ class InferenceAPI(object):
         return schema
 
     def _filter_tasks(
-        self, inf_tasks: Iterable[InferenceTask]
+            self, inf_tasks: Iterable[InferenceTask]
     ) -> Iterator[InferenceTask]:
         for task in inf_tasks:
             if task.is_discarded:
@@ -268,9 +270,9 @@ class InferenceAPI(object):
         else:
             user_return = self.user_func(*user_args, tasks=filtered_tasks)
             if (
-                isinstance(user_return, (list, tuple))
-                and len(user_return)
-                and isinstance(user_return[0], InferenceResult)
+                    isinstance(user_return, (list, tuple))
+                    and len(user_return)
+                    and isinstance(user_return[0], InferenceResult)
             ):
                 inf_results = user_return
             else:
@@ -336,6 +338,7 @@ class InferenceAPI(object):
 
         return exit_code
 
+    @newrelic.agent.lambda_handler()
     def handle_aws_lambda_event(self, event):
         inf_task = self.input_adapter.from_aws_lambda_event(event)
         result = next(iter(self.infer((inf_task,))))
